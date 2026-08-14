@@ -1,0 +1,7 @@
+.git
+*.md
+/bin
+*.wav
+*.mp4
+*.bin
+.env

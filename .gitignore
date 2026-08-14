@@ -1,0 +1,12 @@
+/igdecoder
+/bin/
+*.wav
+*.mp4
+*.whisper.json
+*.bin
+.env
+.env.*
+*.local
+.DS_Store
+coverage.out
+*.test
