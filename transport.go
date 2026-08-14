@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	igBase    = "https://www.instagram.com"
-	igAPIBase = "https://i.instagram.com"
+	igBase = "https://www.instagram.com"
 )
 
 func (c *Client) apiGet(ctx context.Context, op, rawURL string, out any) error {

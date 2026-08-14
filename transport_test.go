@@ -102,3 +102,18 @@ func TestCookieHeader(t *testing.T) {
 		t.Errorf("parcial: got %q", got)
 	}
 }
+
+func TestThrottleNotMistakenForLogin(t *testing.T) {
+	body := `{"message":"Aguarde alguns minutos antes de tentar novamente.","require_login":true,"status":"fail"}`
+	got := classifyStatus(401, body)
+	if !errors.Is(got, ErrRateLimited) {
+		t.Errorf("throttle 401 deveria ser ErrRateLimited, veio %v", got)
+	}
+	if errors.Is(got, ErrLoginRequired) {
+		t.Error("throttle nao deveria pedir novo login")
+	}
+	real := classifyStatus(401, `{"message":"login_required"}`)
+	if !errors.Is(real, ErrLoginRequired) {
+		t.Errorf("401 real deveria ser ErrLoginRequired, veio %v", real)
+	}
+}

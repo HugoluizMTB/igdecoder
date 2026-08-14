@@ -52,13 +52,13 @@ const profileJSON = `{"data":{"user":{
 }}}`
 
 func reelJSON(pk, code string, takenAt int64) string {
-	return fmt.Sprintf(`{"media":{
-		"pk":%q,"code":%q,"media_type":2,"taken_at":%d,
+	return fmt.Sprintf(`{
+		"pk":%q,"code":%q,"media_type":2,"product_type":"clips","taken_at":%d,
 		"video_versions":[{"url":"https://cdn/%s.mp4","width":720,"height":1280}],
 		"video_duration":10.0,"caption":{"text":"legenda"},
 		"user":{"pk":"456","username":"fulano"},
 		"play_count":100,"like_count":10
-	}}`, pk, code, takenAt, pk)
+	}`, pk, code, takenAt, pk)
 }
 
 func TestProfileParses(t *testing.T) {
@@ -106,8 +106,8 @@ func TestCaptureReelsAndStories(t *testing.T) {
 		switch {
 		case strings.Contains(r.URL.Path, "web_profile_info"):
 			return 200, profileJSON
-		case strings.Contains(r.URL.Path, "clips/user"):
-			return 200, `{"items":[` + reelJSON("1", "AAA", now) + `],"paging_info":{"more_available":false}}`
+		case strings.Contains(r.URL.Path, "feed/user"):
+			return 200, `{"items":[` + reelJSON("1", "AAA", now) + `],"more_available":false}`
 		case strings.Contains(r.URL.Path, "reels_media"):
 			return 200, fmt.Sprintf(`{"reels":{"456":{"items":[{
 				"pk":"9","media_type":2,"taken_at":%d,"expiring_at":%d,
@@ -145,7 +145,7 @@ func TestCaptureRespectsSince(t *testing.T) {
 		if strings.Contains(r.URL.Path, "web_profile_info") {
 			return 200, profileJSON
 		}
-		if strings.Contains(r.URL.Path, "clips/user") {
+		if strings.Contains(r.URL.Path, "feed/user") {
 			return 200, `{"items":[` + reelJSON("1", "OLD", old) + `],"paging_info":{"more_available":false}}`
 		}
 		return 404, `{}`
@@ -168,12 +168,12 @@ func TestCapturePaginatesUntilLimit(t *testing.T) {
 		if strings.Contains(r.URL.Path, "web_profile_info") {
 			return 200, profileJSON
 		}
-		if strings.Contains(r.URL.Path, "clips/user") {
+		if strings.Contains(r.URL.Path, "feed/user") {
 			calls++
 			if calls == 1 {
-				return 200, `{"items":[` + reelJSON("1", "A", now) + `],"paging_info":{"more_available":true,"max_id":"CURSOR"}}`
+				return 200, `{"items":[` + reelJSON("1", "A", now) + `],"more_available":true,"next_max_id":"CURSOR"}`
 			}
-			return 200, `{"items":[` + reelJSON("2", "B", now) + `],"paging_info":{"more_available":false}}`
+			return 200, `{"items":[` + reelJSON("2", "B", now) + `],"more_available":false}`
 		}
 		return 404, `{}`
 	})

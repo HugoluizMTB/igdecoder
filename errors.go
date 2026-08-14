@@ -45,6 +45,9 @@ func (e *HTTPError) Error() string {
 func (e *HTTPError) Unwrap() error { return e.sentinel }
 
 func classifyStatus(status int, body string) error {
+	if isThrottleMessage(body) {
+		return ErrRateLimited
+	}
 	switch status {
 	case 401:
 		return ErrLoginRequired
@@ -69,6 +72,16 @@ func classifyStatus(status int, body string) error {
 		return ErrChallenge
 	}
 	return nil
+}
+
+func isThrottleMessage(body string) bool {
+	return containsAny(body,
+		"wait a few minutes",
+		"Aguarde alguns minutos",
+		"espera unos minutos",
+		"try again later",
+		"rate limited",
+	)
 }
 
 func containsAny(s string, subs ...string) bool {

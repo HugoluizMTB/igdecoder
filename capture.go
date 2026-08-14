@@ -165,40 +165,7 @@ func (c *Client) Posts(ctx context.Context, username string, limit int) ([]Media
 	return c.posts(ctx, prof, orInt(limit, DefaultLimit), DefaultMaxPages, time.Time{})
 }
 
-func (c *Client) reels(ctx context.Context, prof Profile, limit, maxPages int, cutoff time.Time) ([]Media, error) {
-	var out []Media
-	cursor := ""
-	for page := 0; page < maxPages && len(out) < limit; page++ {
-		form := url.Values{
-			"target_user_id":     {prof.UserID},
-			"page_size":          {itoa(pageSize)},
-			"include_feed_video": {"true"},
-		}
-		if cursor != "" {
-			form.Set("max_id", cursor)
-		}
-		var resp any
-		if err := c.apiPostForm(ctx, "reels",
-			buildURL(igBase, "/api/v1/clips/user/", nil), form, &resp); err != nil {
-			if page == 0 {
-				return nil, err
-			}
-			break
-		}
-		batch := normalizeAll(resp, Reel, prof)
-		out = append(out, batch...)
-		if reachedCutoff(batch, cutoff) {
-			break
-		}
-		cursor = nextCursor(resp)
-		if cursor == "" {
-			break
-		}
-	}
-	return capSlice(out, limit), nil
-}
-
-func (c *Client) posts(ctx context.Context, prof Profile, limit, maxPages int, cutoff time.Time) ([]Media, error) {
+func (c *Client) feed(ctx context.Context, op string, prof Profile, limit, maxPages int, cutoff time.Time, keep func(Kind) bool) ([]Media, error) {
 	var out []Media
 	cursor := ""
 	for page := 0; page < maxPages && len(out) < limit; page++ {
@@ -207,17 +174,16 @@ func (c *Client) posts(ctx context.Context, prof Profile, limit, maxPages int, c
 			q.Set("max_id", cursor)
 		}
 		var resp any
-		if err := c.apiGet(ctx, "posts",
-			buildURL(igAPIBase, "/api/v1/feed/user/"+prof.UserID+"/", q), &resp); err != nil {
+		if err := c.apiGet(ctx, op,
+			buildURL(igBase, "/api/v1/feed/user/"+prof.UserID+"/", q), &resp); err != nil {
 			if page == 0 {
 				return nil, err
 			}
 			break
 		}
 		batch := normalizeAll(resp, "", prof)
-
 		for _, m := range batch {
-			if m.Kind == Video || m.Kind == Image {
+			if keep(m.Kind) {
 				out = append(out, m)
 			}
 		}
@@ -232,11 +198,23 @@ func (c *Client) posts(ctx context.Context, prof Profile, limit, maxPages int, c
 	return capSlice(out, limit), nil
 }
 
+func (c *Client) reels(ctx context.Context, prof Profile, limit, maxPages int, cutoff time.Time) ([]Media, error) {
+	return c.feed(ctx, "reels", prof, limit, maxPages, cutoff, func(k Kind) bool {
+		return k == Reel
+	})
+}
+
+func (c *Client) posts(ctx context.Context, prof Profile, limit, maxPages int, cutoff time.Time) ([]Media, error) {
+	return c.feed(ctx, "posts", prof, limit, maxPages, cutoff, func(k Kind) bool {
+		return k == Video || k == Image
+	})
+}
+
 func (c *Client) stories(ctx context.Context, prof Profile) ([]Media, error) {
 	q := url.Values{"reel_ids": {prof.UserID}}
 	var resp any
 	if err := c.apiGet(ctx, "stories",
-		buildURL(igAPIBase, "/api/v1/feed/reels_media/", q), &resp); err != nil {
+		buildURL(igBase, "/api/v1/feed/reels_media/", q), &resp); err != nil {
 		return nil, err
 	}
 	return normalizeAll(resp, Story, prof), nil
@@ -245,7 +223,7 @@ func (c *Client) stories(ctx context.Context, prof Profile) ([]Media, error) {
 func (c *Client) highlights(ctx context.Context, prof Profile, limit int) ([]Media, error) {
 	var tray any
 	if err := c.apiGet(ctx, "highlights_tray",
-		buildURL(igAPIBase, "/api/v1/highlights/"+prof.UserID+"/highlights_tray/", nil), &tray); err != nil {
+		buildURL(igBase, "/api/v1/highlights/"+prof.UserID+"/highlights_tray/", nil), &tray); err != nil {
 		return nil, err
 	}
 
@@ -264,7 +242,7 @@ func (c *Client) highlights(ctx context.Context, prof Profile, limit int) ([]Med
 		q := url.Values{"reel_ids": {id}}
 		var resp any
 		if err := c.apiGet(ctx, "highlight_reel",
-			buildURL(igAPIBase, "/api/v1/feed/reels_media/", q), &resp); err != nil {
+			buildURL(igBase, "/api/v1/feed/reels_media/", q), &resp); err != nil {
 			if isFatal(err) {
 				return out, err
 			}
