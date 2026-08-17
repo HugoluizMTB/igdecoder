@@ -93,6 +93,16 @@ cli.Posts(ctx, "perfil", 10)
 cli.Profile(ctx, "perfil")
 ```
 
+| Conteúdo | Precisa seguir o perfil? |
+|---|---|
+| Perfil, reels, posts | não — qualquer perfil público |
+| **Stories** | **sim** |
+
+`Stories` responde `200` com lista **vazia** — sem erro — quando a conta logada
+não segue o alvo. Verificado com um perfil público de 1,4M seguidores e story
+ativo: vazio até seguir. Para monitorar stories, a conta precisa seguir cada
+perfil.
+
 `Reels` e `Posts` leem a mesma rota (`/api/v1/feed/user/`) e filtram por tipo: um
 reel chega no feed com `product_type: "clips"`. A rota `/api/v1/clips/user/`
 responde `401 require_login` para sessões web e por isso não é usada.

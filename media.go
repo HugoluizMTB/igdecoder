@@ -14,14 +14,38 @@ var ErrBadPermalink = errors.New("igdecoder: nao consegui extrair o shortcode")
 const shortcodeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
 
 var (
-	permalinkRe = regexp.MustCompile(`instagram\.com/(?:[^/]+/)?(?:reel|reels|p|tv)/([A-Za-z0-9_-]+)`)
+	permalinkRe = regexp.MustCompile(`instagram\.com/(?:([^/]+)/)?(?:reel|reels|p|tv)/([A-Za-z0-9_-]+)`)
+	storyRe     = regexp.MustCompile(`instagram\.com/stories/([A-Za-z0-9_.]+)/(\d+)`)
 	shortcodeRe = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 )
 
+type Link struct {
+	Username  string
+	Shortcode string
+	StoryID   string
+}
+
+func (l Link) IsStory() bool { return l.StoryID != "" }
+
+func ParsePermalink(input string) (Link, error) {
+	s := strings.TrimSpace(input)
+	if m := storyRe.FindStringSubmatch(s); len(m) == 3 {
+		return Link{Username: strings.ToLower(m[1]), StoryID: m[2]}, nil
+	}
+	if m := permalinkRe.FindStringSubmatch(s); len(m) == 3 {
+		return Link{Username: strings.ToLower(m[1]), Shortcode: m[2]}, nil
+	}
+	sc, err := ParseShortcode(s)
+	if err != nil {
+		return Link{}, err
+	}
+	return Link{Shortcode: sc}, nil
+}
+
 func ParseShortcode(input string) (string, error) {
 	s := strings.TrimSpace(input)
-	if m := permalinkRe.FindStringSubmatch(s); len(m) == 2 {
-		return m[1], nil
+	if m := permalinkRe.FindStringSubmatch(s); len(m) == 3 {
+		return m[2], nil
 	}
 	if s != "" && !strings.Contains(s, "/") && !strings.Contains(s, ".") {
 		if shortcodeRe.MatchString(s) {
