@@ -117,3 +117,14 @@ func TestThrottleNotMistakenForLogin(t *testing.T) {
 		t.Errorf("401 real deveria ser ErrLoginRequired, veio %v", real)
 	}
 }
+
+func TestChallengeTemPrioridadeSobreThrottle(t *testing.T) {
+	body := `{"message":"checkpoint_required. Please try again later.","status":"fail"}`
+	got := classifyStatus(403, body)
+	if !errors.Is(got, ErrChallenge) {
+		t.Errorf("checkpoint com texto de throttle deveria ser ErrChallenge, veio %v", got)
+	}
+	if errors.Is(got, ErrRateLimited) {
+		t.Error("checkpoint nao pode virar rate limit: causaria retry infinito")
+	}
+}

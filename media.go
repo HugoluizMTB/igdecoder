@@ -13,7 +13,10 @@ var ErrBadPermalink = errors.New("igdecoder: nao consegui extrair o shortcode")
 
 const shortcodeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
 
-var permalinkRe = regexp.MustCompile(`instagram\.com/(?:[^/]+/)?(?:reel|reels|p|tv)/([A-Za-z0-9_-]+)`)
+var (
+	permalinkRe = regexp.MustCompile(`instagram\.com/(?:[^/]+/)?(?:reel|reels|p|tv)/([A-Za-z0-9_-]+)`)
+	shortcodeRe = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+)
 
 func ParseShortcode(input string) (string, error) {
 	s := strings.TrimSpace(input)
@@ -21,7 +24,7 @@ func ParseShortcode(input string) (string, error) {
 		return m[1], nil
 	}
 	if s != "" && !strings.Contains(s, "/") && !strings.Contains(s, ".") {
-		if ok, _ := regexp.MatchString(`^[A-Za-z0-9_-]+$`, s); ok {
+		if shortcodeRe.MatchString(s) {
 			return s, nil
 		}
 	}

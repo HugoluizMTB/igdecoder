@@ -45,6 +45,9 @@ func (e *HTTPError) Error() string {
 func (e *HTTPError) Unwrap() error { return e.sentinel }
 
 func classifyStatus(status int, body string) error {
+	if containsAny(body, "checkpoint_required", "challenge_required") {
+		return ErrChallenge
+	}
 	if isThrottleMessage(body) {
 		return ErrRateLimited
 	}
